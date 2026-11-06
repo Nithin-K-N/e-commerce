@@ -1,0 +1,124 @@
+services:
+  # =========================================================================
+  # 1. PostgreSQL Database (Shared instance with 3 isolated microservice DBs)
+  # =========================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: ecommerce-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+  # =========================================================================
+  # 2. Redis Cache & Distributed Lock Engine
+  # =========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: ecommerce-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - ecommerce-network
+
+  # =========================================================================
+  # 3. Apache Kafka (KRaft mode - ZooKeeper-less)
+  # =========================================================================
+  kafka:
+    image: apache/kafka:3.8.0
+    container_name: ecommerce-kafka
+    restart: unless-stopped
+    ports:
+      - "9092:9092"   # Internal Docker network listener
+      - "9094:9094"   # Host machine access (e.g. your local IDE / CLI)
+    environment:
+      # KRaft cluster configuration
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:9093'
+      
+      # Listeners definition:
+      # PLAINTEXT: for internal Docker container communication (kafka:9092)
+      # EXTERNAL: for host machine access (localhost:9094)
+      # CONTROLLER: for internal KRaft quorum voting
+      KAFKA_LISTENERS: 'PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      
+      # Single-node cluster settings
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_NUM_PARTITIONS: 3
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks:
+      - ecommerce-network
+
+  # =========================================================================
+  # 4. Kafka UI (Visual Web Management Console for Topics & Messages)
+  # =========================================================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: ecommerce-kafka-ui
+    restart: unless-stopped
+    ports:
+      - "8088:8080" # Accessible in browser at http://localhost:8088
+    environment:
+      KAFKA_CLUSTERS_0_NAME: 'local-kraft-cluster'
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: 'kafka:9092'
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - ecommerce-network
+
+# =========================================================================
+# Persistent Named Volumes (Data persists across container restarts/removals)
+# =========================================================================
+volumes:
+  postgres_data:
+    name: ecommerce_postgres_data
+  redis_data:
+    name: ecommerce_redis_data
+  kafka_data:
+    name: ecommerce_kafka_data
+
+# =========================================================================
+# Custom Bridge Network (Enables DNS resolution by container name)
+# =========================================================================
+networks:
+  ecommerce-network:
+    name: ecommerce-network
+    driver: bridge
