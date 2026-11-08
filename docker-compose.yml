@@ -138,6 +138,40 @@ services:
     networks:
       - ecommerce-network
 
+  # =========================================================================
+  # 6. Inventory service (Spring Boot 3 + JPA + Redis)
+  # =========================================================================
+  invnt-service:
+    build:
+      context: ./inventory-service
+      dockerfile: Dockerfile
+    container_name: ecommerce-inventory-service
+    restart: unless-stopped
+    ports:
+     - "8082:8080"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: inventory_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep UP || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - ecommerce-network
+
 # =========================================================================
 # Persistent Named Volumes (Data persists across container restarts/removals)
 # =========================================================================

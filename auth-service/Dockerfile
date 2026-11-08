@@ -35,7 +35,7 @@ RUN chown -R appuser:appgroup /app
 USER appuser
 
 # Expose the application port
-EXPOSE 8081
+EXPOSE 8080
 
 # JVM flags optimized for containerized environments:
 # - MaxRAMPercentage=75: ensures JVM respects container cgroups memory limits
