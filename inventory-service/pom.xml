@@ -46,6 +46,12 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- Apache Kafka for Event-Driven Messaging -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
         <!-- Validation & Actuator -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
