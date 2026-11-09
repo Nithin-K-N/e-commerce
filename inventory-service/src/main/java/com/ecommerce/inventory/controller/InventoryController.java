@@ -7,22 +7,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/inventory")
+@RequiredArgsConstructor 
 @Tag(name = "Inventory", description = "Endpoints for catalog management, real-time stock inquiry, and flash-sale reservation")
 public class InventoryController {
 
     private final InventoryService inventoryService;
-
-    public InventoryController(InventoryService inventoryService) {
-        this.inventoryService = inventoryService;
-    }
 
     @PostMapping("/products")
     @Operation(summary = "Create product", description = "Registers a new product in the database and seeds initial stock into Redis")
@@ -67,10 +65,5 @@ public class InventoryController {
             @RequestParam int quantity,
             @RequestParam(required = false, defaultValue = "COMPENSATION") String orderRef) {
         return ResponseEntity.ok(inventoryService.releaseStock(sku, quantity, orderRef));
-    }
-
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", ex.getMessage()));
     }
 }

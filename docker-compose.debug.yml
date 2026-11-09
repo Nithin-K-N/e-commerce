@@ -1,0 +1,22 @@
+# Opt-in local IDE remote debugging. Never use this override in production.
+services:
+  auth-service:
+    ports:
+      - "127.0.0.1:5005:5005"
+    environment:
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+  invnt-service:
+    ports:
+      - "127.0.0.1:5006:5005"
+    environment:
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+  order-service:
+    ports:
+      - "127.0.0.1:5007:5005"
+    environment:
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
+  notification-service:
+    ports:
+      - "127.0.0.1:5008:5005"
+    environment:
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"

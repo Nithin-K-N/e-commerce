@@ -13,7 +13,7 @@ public class NotificationEventConsumer {
 
     @KafkaListener(topics = "order-placed-topic", groupId = "notification-service-group")
     public void handleOrderPlaced(OrderPlacedEvent event) {
-        log.info("Sending Email Notification [ORDER_PLACED]: orderNumber={}, userId={}, totalAmount=\${}, itemsCount={}",
+        log.info("Sending Email Notification [ORDER_PLACED]: orderNumber={}, userId={}, totalAmount={}, itemsCount={}",
                 event.orderNumber(), event.userId(), event.totalAmount(), event.items().size());
     }
 
