@@ -5,6 +5,9 @@ import com.ecommerce.auth.model.Role;
 import com.ecommerce.auth.model.User;
 import com.ecommerce.auth.repository.UserRepository;
 import com.ecommerce.auth.security.JwtTokenProvider;
+
+import lombok.AllArgsConstructor;
+
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 
 @Service
+@AllArgsConstructor 
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -20,16 +24,16 @@ public class AuthService {
     private final JwtTokenProvider jwtTokenProvider;
     private final StringRedisTemplate redisTemplate;
 
-    public AuthService(
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder,
-            JwtTokenProvider jwtTokenProvider,
-            StringRedisTemplate redisTemplate) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenProvider = jwtTokenProvider;
-        this.redisTemplate = redisTemplate;
-    }
+    // public AuthService(
+    //         UserRepository userRepository,
+    //         PasswordEncoder passwordEncoder,
+    //         JwtTokenProvider jwtTokenProvider,
+    //         StringRedisTemplate redisTemplate) {
+    //     this.userRepository = userRepository;
+    //     this.passwordEncoder = passwordEncoder;
+    //     this.jwtTokenProvider = jwtTokenProvider;
+    //     this.redisTemplate = redisTemplate;
+    // }
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -83,9 +87,16 @@ public class AuthService {
         return new UserSummaryDto(user.getId(), user.getEmail(), user.getFullName(), user.getRole());
     }
 
-    private void saveTokenInRedis(Long userId, String token) {
+    // Redis cache
+    private void saveTokenInRedis(
+        Long userId, 
+        String token
+    ) {
         String redisKey = "auth:session:" + userId;
         long ttlSeconds = jwtTokenProvider.getExpirationMs() / 1000;
-        redisTemplate.opsForValue().set(redisKey, token, Duration.ofSeconds(ttlSeconds));
+
+        redisTemplate
+            .opsForValue()
+            .set(redisKey, token, Duration.ofSeconds(ttlSeconds));
     }
 }

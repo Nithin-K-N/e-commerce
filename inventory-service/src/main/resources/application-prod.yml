@@ -1,0 +1,16 @@
+# Production overrides (AWS ECS / EKS / Cloud)
+# Secrets and DB URLs are injected via AWS SSM / Secrets Manager environment variables.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized

@@ -1,6 +1,6 @@
 services:
   # =========================================================================
-  # 1. PostgreSQL Database (Shared instance with 3 isolated microservice DBs)
+  # 1. PostgreSQL Database
   # =========================================================================
   postgres:
     image: postgres:16-alpine
@@ -44,7 +44,7 @@ services:
       - ecommerce-network
 
   # =========================================================================
-  # 3. Apache Kafka (KRaft mode - ZooKeeper-less)
+  # 3. Apache Kafka (KRaft mode)
   # =========================================================================
   kafka:
     image: apache/kafka:3.8.0
@@ -86,7 +86,7 @@ services:
       - ecommerce-network
 
   # =========================================================================
-  # 4. Kafka UI (Visual Web Management Console for Topics & Messages)
+  # 4. Kafka UI 
   # =========================================================================
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -105,7 +105,7 @@ services:
       - ecommerce-network
 
   # =========================================================================
-  # 5. Auth & User Management Microservice (Spring Boot 3 + JPA + Redis)
+  # 5. service: Auth & User Management
   # =========================================================================
   auth-service:
     build:
@@ -116,6 +116,7 @@ services:
     ports:
       - "8081:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: auth_db
@@ -139,7 +140,7 @@ services:
       - ecommerce-network
 
   # =========================================================================
-  # 6. Inventory service (Spring Boot 3 + JPA + Redis)
+  # 6. service: Inventory
   # =========================================================================
   invnt-service:
     build:
@@ -150,6 +151,7 @@ services:
     ports:
      - "8082:8080"
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres
       DB_PORT: 5432
       DB_NAME: inventory_db
@@ -172,8 +174,44 @@ services:
     networks:
       - ecommerce-network
 
+  # =========================================================================
+  # observability stack
+  # =========================================================================
+  loki:
+    image: grafana/loki:2.9.2
+    container_name: grafana-loki-db
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - ecommerce-network
+
+  promtail:
+    image: grafana/promtail:2.9.2
+    container_name: promtail-log-collector
+    volumes:
+      - ./promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - ecommerce-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      - ecommerce-network
+
 # =========================================================================
-# Persistent Named Volumes (Data persists across container restarts/removals)
+# Persistent Named-Volumes
 # =========================================================================
 volumes:
   postgres_data:
@@ -184,7 +222,7 @@ volumes:
     name: ecommerce_kafka_data
 
 # =========================================================================
-# Custom Bridge Network (Enables DNS resolution by container name)
+# Custom Bridge Network
 # =========================================================================
 networks:
   ecommerce-network:
